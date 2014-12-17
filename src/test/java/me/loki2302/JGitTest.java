@@ -3,6 +3,7 @@ package me.loki2302;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -14,6 +15,8 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class JGitTest {
     @Test
@@ -30,14 +33,30 @@ public class JGitTest {
 
             FileUtils.writeStringToFile(Paths.get("copy", "1.txt").toFile(), "hello");
 
+            Status status = git.status().call();
+            assertEquals(1, status.getUntracked().size());
+            assertEquals("1.txt", status.getUntracked().iterator().next());
+            assertFalse(status.hasUncommittedChanges());
+
             git.add()
                     .addFilepattern("1.txt")
                     .call();
+
+            status = git.status().call();
+            assertTrue(status.getUntracked().isEmpty());
+            assertEquals(1, status.getAdded().size());
+            assertEquals("1.txt", status.getAdded().iterator().next());
+            assertTrue(status.hasUncommittedChanges());
 
             git.commit()
                     .setMessage("Initial version")
                     .setAuthor("loki2302", "loki2302@loki2302.me")
                     .call();
+
+            status = git.status().call();
+            assertTrue(status.getUntracked().isEmpty());
+            assertTrue(status.getAdded().isEmpty());
+            assertFalse(status.hasUncommittedChanges());
 
             assertThereAreNCommits(git, 1);
 
