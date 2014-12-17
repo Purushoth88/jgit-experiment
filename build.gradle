@@ -9,7 +9,9 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
-    testCompile 'org.eclipse.jgit:org.eclipse.jgit:3.5.1.201410131835-r'
+    testCompile 'org.eclipse.jgit:org.eclipse.jgit:3.6.0.201411121045-m1'
+    testCompile 'org.eclipse.jgit:org.eclipse.jgit.http.server:3.6.0.201411121045-m1'
+    testCompile 'org.eclipse.jgit:org.eclipse.jgit.junit.http:3.6.0.201411121045-m1'
     testCompile 'commons-io:commons-io:2.4'
     testCompile 'com.google.guava:guava:18.0'
 }
