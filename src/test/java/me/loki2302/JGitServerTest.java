@@ -22,13 +22,14 @@ public class JGitServerTest {
 
     @Before
     public void startServer() throws Exception {
-        File repositoryDirectory = Paths.get("remoteGit").toFile();
-        if(repositoryDirectory.exists()) {
-            FileUtils.deleteDirectory(repositoryDirectory);
+        File remoteRepoDirectory = Paths.get("remoteGit").toFile();
+        if(remoteRepoDirectory.exists()) {
+            FileUtils.deleteDirectory(remoteRepoDirectory);
         }
 
+        // git init --bare
         Git git = Git.init()
-                .setDirectory(repositoryDirectory)
+                .setDirectory(remoteRepoDirectory)
                 .setBare(true)
                 .call();
 
@@ -44,48 +45,62 @@ public class JGitServerTest {
 
     @Test
     public void dummy() throws Exception {
-        File repositoryDirectory = Paths.get("localGit").toFile();
-        if(repositoryDirectory.exists()) {
-            FileUtils.deleteDirectory(repositoryDirectory);
+        File localRepoDirectory = Paths.get("localGit").toFile();
+        if(localRepoDirectory.exists()) {
+            FileUtils.deleteDirectory(localRepoDirectory);
         }
 
         try {
+            // git init
             Git git = Git.init()
-                    .setDirectory(repositoryDirectory)
+                    .setDirectory(localRepoDirectory)
                     .call();
 
+            // echo "hello" > 1.txt
             FileUtils.writeStringToFile(Paths.get("localGit", "1.txt").toFile(), "hello");
 
+            // git add 1.txt
             git.add()
                     .addFilepattern("1.txt")
                     .call();
 
+            // git config user.name "loki2302"
+            // git config user.email "loki2302@loki2302.me"
+            // git commit -m "Initial version"
             git.commit()
                     .setMessage("Initial version")
                     .setAuthor("loki2302", "loki2302@loki2302.me")
                     .call();
 
+            // git remote add ....
             StoredConfig config = git.getRepository().getConfig();
             config.setString("remote", "origin", "url", simpleHttpServer.getUri().toString());
             config.save();
 
+            // git push origin master
             git.push()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider("agitter", "letmein"))
                     .call();
         } finally {
-            FileUtils.deleteDirectory(repositoryDirectory);
+            FileUtils.deleteDirectory(localRepoDirectory);
         }
 
-        Git git = Git.cloneRepository()
-                .setURI(simpleHttpServer.getUri().toString())
-                .setDirectory(repositoryDirectory)
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider("agitter", "letmein"))
-                .call();
+        try {
+            // git clone http://localhost:???/....
+            Git git = Git.cloneRepository()
+                    .setURI(simpleHttpServer.getUri().toString())
+                    .setDirectory(localRepoDirectory)
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider("agitter", "letmein"))
+                    .call();
 
-        Iterable<RevCommit> revCommitsIterable = git.log().call();
-        List<RevCommit> revCommits = Lists.newArrayList(revCommitsIterable);
-        assertEquals(1, revCommits.size());
-        assertEquals("Initial version", revCommits.get(0).getFullMessage());
+            // git log
+            Iterable<RevCommit> revCommitsIterable = git.log().call();
+            List<RevCommit> revCommits = Lists.newArrayList(revCommitsIterable);
+            assertEquals(1, revCommits.size());
+            assertEquals("Initial version", revCommits.get(0).getFullMessage());
+        } finally {
+            FileUtils.deleteDirectory(localRepoDirectory);
+        }
     }
 }
