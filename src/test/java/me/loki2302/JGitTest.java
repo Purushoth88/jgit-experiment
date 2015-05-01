@@ -7,7 +7,9 @@ import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.*;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,54 +21,50 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class JGitTest {
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
     public void dummy() throws IOException, GitAPIException {
-        File repositoryDirectory = Paths.get("copy").toFile();
-        if(repositoryDirectory.exists()) {
-            FileUtils.deleteDirectory(repositoryDirectory);
-        }
+        File repositoryDirectory = temporaryFolder.newFolder();
 
-        try {
-            Git git = Git.init()
-                    .setDirectory(repositoryDirectory)
-                    .call();
+        Git git = Git.init()
+                .setDirectory(repositoryDirectory)
+                .call();
 
-            FileUtils.writeStringToFile(Paths.get("copy", "1.txt").toFile(), "hello");
+        writeRepositoryFile(repositoryDirectory, "1.txt", "hello");
 
-            Status status = git.status().call();
-            assertEquals(1, status.getUntracked().size());
-            assertEquals("1.txt", status.getUntracked().iterator().next());
-            assertFalse(status.hasUncommittedChanges());
+        Status status = git.status().call();
+        assertEquals(1, status.getUntracked().size());
+        assertEquals("1.txt", status.getUntracked().iterator().next());
+        assertFalse(status.hasUncommittedChanges());
 
-            git.add()
-                    .addFilepattern("1.txt")
-                    .call();
+        git.add()
+                .addFilepattern("1.txt")
+                .call();
 
-            status = git.status().call();
-            assertTrue(status.getUntracked().isEmpty());
-            assertEquals(1, status.getAdded().size());
-            assertEquals("1.txt", status.getAdded().iterator().next());
-            assertTrue(status.hasUncommittedChanges());
+        status = git.status().call();
+        assertTrue(status.getUntracked().isEmpty());
+        assertEquals(1, status.getAdded().size());
+        assertEquals("1.txt", status.getAdded().iterator().next());
+        assertTrue(status.hasUncommittedChanges());
 
-            git.commit()
-                    .setMessage("Initial version")
-                    .setAuthor("loki2302", "loki2302@loki2302.me")
-                    .call();
+        git.commit()
+                .setMessage("Initial version")
+                .setAuthor("loki2302", "loki2302@loki2302.me")
+                .call();
 
-            status = git.status().call();
-            assertTrue(status.getUntracked().isEmpty());
-            assertTrue(status.getAdded().isEmpty());
-            assertFalse(status.hasUncommittedChanges());
+        status = git.status().call();
+        assertTrue(status.getUntracked().isEmpty());
+        assertTrue(status.getAdded().isEmpty());
+        assertFalse(status.hasUncommittedChanges());
 
-            assertThereAreNCommits(git, 1);
+        assertThereAreNCommits(git, 1);
 
-            assertThereAreNBranches(git, 1);
-            git.checkout().setCreateBranch(true).setName("newbranch").call();
+        assertThereAreNBranches(git, 1);
+        git.checkout().setCreateBranch(true).setName("newbranch").call();
 
-            assertThereAreNBranches(git, 2);
-        } finally {
-            FileUtils.deleteDirectory(repositoryDirectory);
-        }
+        assertThereAreNBranches(git, 2);
     }
 
     private static void assertThereAreNCommits(Git git, int expectedNumberOfCommits) throws GitAPIException {
@@ -78,5 +76,9 @@ public class JGitTest {
     private static void assertThereAreNBranches(Git git, int expectedNumberOfBranches) throws GitAPIException {
         List<Ref> branches = git.branchList().call();
         assertEquals(expectedNumberOfBranches, branches.size());
+    }
+
+    private static void writeRepositoryFile(File repositoryDirectory, String filename, String content) throws IOException {
+        FileUtils.writeStringToFile(Paths.get(repositoryDirectory.getAbsolutePath(), filename).toFile(), content);
     }
 }
